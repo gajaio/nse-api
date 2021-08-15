@@ -1,0 +1,39 @@
+[
+  {
+    "operation": "remove",
+    "spec": {
+      "data": {
+        "0": ""
+      }
+    }
+  },
+  {
+    "operation": "shift",
+    "spec": {
+      "data": {
+        "*": {
+          "symbol": "[&1].scripName",
+          "open": "[&1].open",
+          "lastPrice": "[&1].ltp",
+          "dayHigh": "[&1].high",
+          "dayLow": "[&1].low",
+          "close": "[&1].lastPrice",
+          "previousClose": "[&1].prevDayClose",
+          "change": "[&1].change",
+          "pChange": "[&1].percentageChange",
+          "totalTradedVolume": "[&1].totalTradedVolume",
+          "totalTradedValue": "[&1].totalTradedValue",
+          "lastUpdateTime": "[&1].lastUpdateTime",
+          "yearHigh": "[&1].yearHigh",
+          "yearLow": "[&1].yearLow",
+          "meta": {
+            "symbol": "[&2].sectorIndex",
+            "companyName": "[&2].companyName",
+            "industry": "[&2].industry",
+            "isFNOSec": "[&2].fnosec"
+          }
+        }
+      }
+    }
+  }
+]

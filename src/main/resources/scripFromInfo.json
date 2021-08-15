@@ -1,0 +1,60 @@
+[
+  {
+    "operation": "shift",
+    "spec": {
+      "info": {
+        "companyName": "companyName",
+        "symbol": "symbol",
+        "isin": "isin",
+        "industry": "industry",
+        "isFNOSec": "fnosec"
+      },
+
+      "metadata": {
+          "pdSectorInd": {
+            "NA": null,
+            "*": {
+              "$": "sector"
+            }
+          },
+        "pdSectorPe": {
+          "NA": null,
+          "*": {
+            "$": "sectorPe"
+          }
+        },
+        "pdSymbolPe": {
+          "NA": null,
+          "*": {
+            "$": "pe"
+          }
+        }
+      },
+      "securityInfo": {
+          "derivatives": "derivatives",
+          "faceValue": {
+            "NA": null,
+            "-": null,
+            "*": {
+              "$": "faceValue"
+            }
+          },
+          "issuedCap": {
+            "NA": null,
+            "-": null,
+            "*": {
+              "$": "cap"
+            }
+          }
+      }
+    }
+  },
+  {
+    "operation": "default",
+    "spec": {
+      "*": {
+        "$1": "&1.Id"
+      }
+    }
+  }
+]
