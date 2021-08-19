@@ -5,17 +5,21 @@ import com.gaja.nse.config.Index;
 import com.gaja.nse.vo.*;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Consumer;
 
 public interface ScripClient {
 
     List<ScripData> getAll(Index index) throws IOException;
 
-    List<Scrip> getAll(List<String> excluded) throws IOException;
+    void processAllScrips(List<String> excluded, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) throws IOException;
 
     OHLC getTradeData(String scrip) throws IOException;
 
     List<OHLCArchieve> getPastOHLCData(String scrip) throws IOException;
+
+    List<OHLCArchieve> getPastOHLCData(String scrip, LocalDate start) throws IOException;
 
     List<BulkDeal> getDeals(String scripName) throws IOException;
 

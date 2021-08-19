@@ -14,6 +14,7 @@ import com.gaja.nse.utils.StockUtils;
 import com.gaja.nse.vo.*;
 import com.jayway.jsonpath.Configuration;
 import lombok.SneakyThrows;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.http.client.HttpResponseException;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +28,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.gaja.nse.utils.NseConstants.*;
@@ -89,7 +93,7 @@ public class NseManager implements ApplicationContextAware {
                 put("index", index.getIndexValue());
             }});
             HttpStatus statusCode = responseEntity.getStatusCode();
-            if(statusCode.is5xxServerError() || statusCode.is4xxClientError())
+            if (statusCode.is5xxServerError() || statusCode.is4xxClientError())
                 throw new HttpResponseException(statusCode.value(), statusCode.getReasonPhrase());
             List<ScripData> scripData = nseScripTransformer.transform(responseEntity.getBody(), resource, new TypeReference<List<ScripData>>() {
             });
@@ -98,16 +102,17 @@ public class NseManager implements ApplicationContextAware {
 
         @SneakyThrows
         @Override
-        public List<Scrip> getAll(List<String> excluded) {
-            return bhavCopy().stream()
-                    .filter(ohlc -> "EQ".equalsIgnoreCase(ohlc.getSeries().trim()))
-                    .filter(ohlc -> !excluded.contains(ohlc.getSymbol())).parallel()
-                    .map(this::getScripData)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .peek(scrip -> System.out.println("Processed -> "+scrip.getSymbol()))
-                    .filter(scrip -> scrip.getSymbol() != null)
-                    .collect(Collectors.toList());
+        public void processAllScrips(List<String> excluded, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) {
+            ListUtils.partition(bhavCopy().stream().filter(ohlc -> "EQ".equalsIgnoreCase(ohlc.getSeries().trim()) && !excluded.contains(ohlc.getSymbol())).parallel().collect(Collectors.toList()), batchSize)
+                    .parallelStream()
+                    .peek(ohlcs -> System.out.println("Processing "+ohlcs.stream().map(OHLC::getSymbol).collect(Collectors.joining(","))))
+                    .map(ohlcVos -> ohlcVos.stream()
+                            .map(this::getScripData)
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .peek(scrip -> System.out.println("Processed -> " + scrip.getSymbol()))
+                            .filter(scrip -> scrip.getSymbol() != null).collect(Collectors.toList()))
+                    .forEach(onEachBatchComplete);
         }
 
         @SneakyThrows
@@ -122,7 +127,7 @@ public class NseManager implements ApplicationContextAware {
                 }
                 return Optional.of(nseScripTransformer.transform(responseEntity.getBody(), scripSpec, new TypeReference<Scrip>() {
                 }));
-            }catch (Exception e){
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             return Optional.empty();
@@ -140,19 +145,27 @@ public class NseManager implements ApplicationContextAware {
         }
 
         @Override
+        public List<OHLCArchieve> getPastOHLCData(String scrip, LocalDate start) throws IOException {
+            return StockUtils.fetchOHLCHistory(scrip, start);
+        }
+
+        @Override
         public List<BulkDeal> getDeals(String scripName) throws IOException {
             ResponseEntity<String> responseEntity = nseDataTemplate.exchange(API_BULKDEAL_URL, HttpMethod.GET, new HttpEntity<>(getHeaders()), String.class, new HashMap<String, String>() {{
                 put("scripName", scripName);
             }});
             HttpStatus statusCode = responseEntity.getStatusCode();
-            if(statusCode.is5xxServerError() || statusCode.is4xxClientError()) throw new HttpResponseException(statusCode.value(), statusCode.getReasonPhrase());
+            if (statusCode.is5xxServerError() || statusCode.is4xxClientError())
+                throw new HttpResponseException(statusCode.value(), statusCode.getReasonPhrase());
             return nseBulkDealTransformer.transform(responseEntity.getBody());
         }
 
         @Override
         public List<OptionChain> getOptionChain(String scripName) throws JsonProcessingException {
             System.out.println("Trying to fetch Options Chain");
-            ResponseEntity<String> responseEntity = nseDataTemplate.exchange(NseConstants.API_OPTION_CHAIN_EQUITIES, HttpMethod.GET, new HttpEntity<>(getHeaders()), String.class, new HashMap<String, String>(){{put("scripName", scripName);}});
+            ResponseEntity<String> responseEntity = nseDataTemplate.exchange(NseConstants.API_OPTION_CHAIN_EQUITIES, HttpMethod.GET, new HttpEntity<>(getHeaders()), String.class, new HashMap<String, String>() {{
+                put("scripName", scripName);
+            }});
             return optionDataAnalyzer.getOptionChart(responseEntity.getBody());
         }
     }

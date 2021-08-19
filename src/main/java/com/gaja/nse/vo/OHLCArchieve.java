@@ -20,27 +20,27 @@ public class OHLCArchieve {
     @JsonProperty("Date")
     private String date;
     @JsonProperty("Prev Close")
-    private float prevClose;
+    private Float prevClose;
     @JsonProperty("Open Price")
-    private float open;
+    private Float open;
     @JsonProperty("High Price")
-    private float high;
+    private Float high;
     @JsonProperty("Low Price")
-    private float low;
+    private Float low;
     @JsonProperty("Last Price")
-    private float ltp;
+    private Float ltp;
     @JsonProperty("Close Price")
-    private float close;
+    private Float close;
     @JsonProperty("Average Price")
-    private float vwap;
+    private Float vwap;
     @JsonProperty("Turnover")
-    private double totalValue;
+    private Double totalValue;
     @JsonProperty("No. of Trades")
-    private long noOfTrades;
+    private Long noOfTrades;
     @JsonProperty("Total Traded Quantity")
-    private long totalVol;
+    private Long totalVol;
     @JsonProperty("Deliverable Qty")
-    private double deliveryQty;
+    private Long deliveryQty;
     @JsonProperty("% Dly Qt to Traded Qty")
-    private float percentageDelivery;
+    private Float percentageDelivery;
 }

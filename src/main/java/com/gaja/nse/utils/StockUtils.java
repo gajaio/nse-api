@@ -11,13 +11,18 @@ import com.gaja.nse.vo.ReportDaily;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.gaja.nse.utils.SecurityType.OPTIDX;
@@ -68,6 +73,9 @@ public class StockUtils {
     }
 
     public static List<OHLCArchieve> fetchOHLCHistory(String scripName) throws IOException {
+        return fetchOHLCHistory(scripName,null);
+    }
+    public static List<OHLCArchieve> fetchOHLCHistory(String scripName, LocalDate fromDate) throws IOException {
         Connection.Response resp1 = Jsoup.connect(NSE_INDIA_WWW1 + "products/content/equities/equities/eq_security.htm")
                 .followRedirects(false)
                 .userAgent(NseConstants.MOZILLA_CLIENT)
@@ -79,19 +87,24 @@ public class StockUtils {
                 .cookies(resp1.cookies())
                 .method(Connection.Method.GET)
                 .execute();
-        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "products/dynaContent/common/productsSymbolMapping.jsp?symbol=" + scripName + "&segmentLink=3&symbolCount=" + resp.body().trim() + "&series=EQ&dateRange=24month&fromDate=&toDate=&dataType=PRICEVOLUMEDELIVERABLE")
+        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "products/dynaContent/common/productsSymbolMapping.jsp?symbol=" + scripName + "&segmentLink=3&symbolCount=" + resp.body().trim() + "&series=EQ&dateRange="+(fromDate!=null?"+":"24month")+"&fromDate="+(fromDate!=null?fromDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&toDate="+(fromDate!=null? LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&dataType=PRICEVOLUMEDELIVERABLE")
                 .userAgent(NseConstants.MOZILLA_CLIENT)
                 .cookies(resp.cookies())
                 .referrer(NSE_INDIA_WWW1 + "products/content/equities/equities/eq_security.htm")
                 .method(Connection.Method.GET)
                 .execute();
         Document parsedResponse = response.parse();
-        String csvData = parsedResponse.getElementById("csvContentDiv").text();
-
+        System.out.println("Parsing "+ scripName);
+        Element csvContentDiv = parsedResponse.getElementById("csvContentDiv");
+        if(csvContentDiv==null) return new ArrayList<>();
+        String csvData = csvContentDiv.text();
         CsvMapper mapper = new CsvMapper();
         CsvSchema bootstrapSchema = CsvSchema.emptySchema().withHeader();
         ObjectReader oReader = mapper.readerFor(OHLCArchieve.class).with(bootstrapSchema);
-        MappingIterator<OHLCArchieve> ohlcItr = oReader.readValues(csvData.replace(":", "\n").getBytes());
+//        String[] split = csvData.split(":");
+//        String header = csvData.split(":")[0];
+//        String finalCSV = header+"\n"+Arrays.stream(split).filter(s -> s.contains(",\"EQ\",")).collect(Collectors.joining("\n"));
+        MappingIterator<OHLCArchieve> ohlcItr = oReader.readValues(csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n").getBytes());
         List<OHLCArchieve> ohlcArchieves = new ArrayList<>();
         ohlcItr.forEachRemaining(o -> ohlcArchieves.add(o));
         return ohlcArchieves;
