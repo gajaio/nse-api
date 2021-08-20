@@ -62,10 +62,6 @@ public class NSECookieHandler {
 
     public synchronized void reInitialize(String failedUrl) throws IOException {
         addCokies(properties);
-//        Map<String, String> cookies = initialize(properties.getHome())
-//                .cookies();
-//        cookies.remove("bm_mi");
-//        cookieMap.put(properties.getHome(), cookies.keySet().stream().map(key -> key + "=" + cookies.get(key)).collect(Collectors.toList()));
         cookieMap.put(failedUrl, getHomePageCookie());
     }
 

@@ -96,9 +96,9 @@ public class NseAppConfig {
     @ConditionalOnMissingBean
     public RequestConfig requestConfig(){
         return RequestConfig.custom()
-                .setConnectTimeout(2000)
-                .setSocketTimeout(2000)
-                .setConnectionRequestTimeout(1000)
+                .setConnectTimeout(5000)
+                .setSocketTimeout(5000)
+                .setConnectionRequestTimeout(2000)
                 .build();
     }
 

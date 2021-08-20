@@ -15,9 +15,13 @@ import org.jsoup.nodes.Element;
 import org.springframework.http.HttpHeaders;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.web.util.UriTemplate;
+import org.springframework.web.util.UriUtils;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -87,7 +91,8 @@ public class StockUtils {
                 .cookies(resp1.cookies())
                 .method(Connection.Method.GET)
                 .execute();
-        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "products/dynaContent/common/productsSymbolMapping.jsp?symbol=" + scripName + "&segmentLink=3&symbolCount=" + resp.body().trim() + "&series=EQ&dateRange="+(fromDate!=null?"+":"24month")+"&fromDate="+(fromDate!=null?fromDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&toDate="+(fromDate!=null? LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&dataType=PRICEVOLUMEDELIVERABLE")
+        if(resp.body().trim().equals("0")) return new ArrayList<>();
+        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "products/dynaContent/common/productsSymbolMapping.jsp?symbol=" + URLEncoder.encode(scripName, StandardCharsets.UTF_8.toString()) + "&segmentLink=3&symbolCount=" + resp.body().trim() + "&series=EQ&dateRange="+(fromDate!=null?"+":"24month")+"&fromDate="+(fromDate!=null?fromDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&toDate="+(fromDate!=null? LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&dataType=PRICEVOLUMEDELIVERABLE")
                 .userAgent(NseConstants.MOZILLA_CLIENT)
                 .cookies(resp.cookies())
                 .referrer(NSE_INDIA_WWW1 + "products/content/equities/equities/eq_security.htm")
@@ -101,9 +106,6 @@ public class StockUtils {
         CsvMapper mapper = new CsvMapper();
         CsvSchema bootstrapSchema = CsvSchema.emptySchema().withHeader();
         ObjectReader oReader = mapper.readerFor(OHLCArchieve.class).with(bootstrapSchema);
-//        String[] split = csvData.split(":");
-//        String header = csvData.split(":")[0];
-//        String finalCSV = header+"\n"+Arrays.stream(split).filter(s -> s.contains(",\"EQ\",")).collect(Collectors.joining("\n"));
         MappingIterator<OHLCArchieve> ohlcItr = oReader.readValues(csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n").getBytes());
         List<OHLCArchieve> ohlcArchieves = new ArrayList<>();
         ohlcItr.forEachRemaining(o -> ohlcArchieves.add(o));

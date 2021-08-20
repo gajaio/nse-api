@@ -27,9 +27,6 @@ public class NseInterceptor implements ClientHttpRequestInterceptor {
     @Override
     public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
         return retryTemplate.execute(retryContext -> handleRequest(request, body, execution));
-//        List<String> cookies = resp.getHeaders().get("Set-Cookie");
-//        nseCookieHandler.saveCookie(request.getURI().getPath(), cookies);
-//        return resp;
     }
 
     private ClientHttpResponse handleRequest(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {

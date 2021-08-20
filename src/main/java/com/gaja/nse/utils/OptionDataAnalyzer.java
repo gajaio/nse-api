@@ -55,9 +55,9 @@ public class OptionDataAnalyzer {
 
     public static Stream<SpotPriceDetails> getCallOptionData(DocumentContext ctx, String month) {
 
-        List<SpotPriceDetails> CallOptionsData = getSpotPriceDetails(ctx, month, "$.records.data[*].CE");
+        List<SpotPriceDetails> callOptionsData = getSpotPriceDetails(ctx, month, "$.records.data[*].CE");
 
-        return CallOptionsData.stream().filter(spotPriceDetails -> spotPriceDetails.getExpiryDate().contains(month)).filter(spotPriceDetails -> spotPriceDetails.getStrikePrice() > spotPriceDetails.getUnderlyingValue());
+        return callOptionsData.stream().filter(spotPriceDetails -> spotPriceDetails.getExpiryDate().contains(month)).filter(spotPriceDetails -> spotPriceDetails.getStrikePrice() > spotPriceDetails.getUnderlyingValue());
     }
 
     public static Stream<SpotPriceDetails> getPutOptionData(DocumentContext ctx, String month) {
