@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,26 +21,32 @@ public class DerivativeArchieve {
     private String date;
     @JsonProperty("Expiry")
     private String expiry;
+    @JsonProperty("Option Type")
+    private String optionType;
     @JsonProperty("Open")
-    private float open;
+    private BigDecimal open;
     @JsonProperty("High")
-    private float high;
+    private BigDecimal high;
     @JsonProperty("Low")
-    private float low;
+    private BigDecimal low;
     @JsonProperty("LTP")
-    private float ltp;
+    private BigDecimal ltp;
     @JsonProperty("Close")
-    private float close;
+    private BigDecimal close;
+    @JsonProperty("Strike Price")
+    private BigDecimal strikePrice;
     @JsonProperty("Settle Price")
-    private double settlePrice;
+    private BigDecimal settlePrice;
     @JsonProperty("Turnover in Lacs")
-    private double turnOver;
+    private BigDecimal turnOver;
+    @JsonProperty("Premium Turnover in Lacs")
+    private BigDecimal premiumTurnOver;
     @JsonProperty("Open Int")
-    private long noOfTrades;
+    private long openInterest;
     @JsonProperty("No. of contracts")
     private long totalContracts;
-    @JsonProperty("% Change in OI")
-    private float oiChange;
+    @JsonProperty("Change in OI")
+    private BigDecimal oiChange;
     @JsonProperty("Underlying Value")
-    private double underlyingValue;
+    private BigDecimal underlyingValue;
 }

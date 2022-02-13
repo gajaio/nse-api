@@ -33,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.gaja.nse.utils.NseConstants.*;
@@ -140,13 +139,23 @@ public class NseManager implements ApplicationContextAware {
         }
 
         @Override
-        public List<OHLCArchieve> getPastOHLCData(String scrip) throws IOException {
-            return StockUtils.fetchOHLCHistory(scrip);
+        public void getPastOHLCData(String scrip, Consumer<List<OHLCArchieve>> onBatch) throws IOException {
+            StockUtils.fetchOHLCHistory(scrip, onBatch);
         }
 
         @Override
-        public List<OHLCArchieve> getPastOHLCData(String scrip, LocalDate start) throws IOException {
-            return StockUtils.fetchOHLCHistory(scrip, start);
+        public void getPastOHLCData(String scrip, LocalDate start, Consumer<List<OHLCArchieve>> onBatch) throws IOException {
+            StockUtils.fetchOHLCHistory(scrip, start, onBatch);
+        }
+
+        @Override
+        public void getPastOptionsData(String scrip, boolean isIndex, LocalDate start, String optionType, Consumer<List<DerivativeArchieve>> onBatch) throws IOException {
+            StockUtils.fetchOptionsHistory(scrip, start, isIndex, optionType, onBatch);
+        }
+
+        @Override
+        public void getPastOptionsData(String scrip, boolean isIndex, String optionType, Consumer<List<DerivativeArchieve>> onBatch) throws IOException {
+            getPastOptionsData(scrip, isIndex, null, optionType, onBatch);
         }
 
         @Override

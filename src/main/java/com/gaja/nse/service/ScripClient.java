@@ -17,9 +17,14 @@ public interface ScripClient {
 
     OHLC getTradeData(String scrip) throws IOException;
 
-    List<OHLCArchieve> getPastOHLCData(String scrip) throws IOException;
 
-    List<OHLCArchieve> getPastOHLCData(String scrip, LocalDate start) throws IOException;
+    void getPastOHLCData(String scrip, Consumer<List<OHLCArchieve>> onBatch) throws IOException;
+
+    void getPastOHLCData(String scrip, LocalDate start, Consumer<List<OHLCArchieve>> onBatch) throws IOException;
+
+    void getPastOptionsData(String scrip, boolean isIndex, LocalDate start, String optionType, Consumer<List<DerivativeArchieve>> onBatch) throws IOException;
+
+    void getPastOptionsData(String scrip, boolean isIndex, String optionType, Consumer<List<DerivativeArchieve>> onBatch) throws IOException;
 
     List<BulkDeal> getDeals(String scripName) throws IOException;
 

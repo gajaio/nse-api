@@ -46,8 +46,7 @@ public class NseApiTests {
 
     @Test
     public void fetchOHLCDataTataMotors() throws IOException {
-        List<OHLCArchieve> tatamotors = StockUtils.fetchOHLCHistory("TATAMOTORS");
-        Assertions.assertTrue(tatamotors.stream().count()>0);
+        StockUtils.fetchOHLCHistory("TATAMOTORS", tatamotors -> Assertions.assertTrue(tatamotors.stream().count()>0));
     }
 
     @Test
