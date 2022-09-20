@@ -1,5 +1,6 @@
 package com.gaja.nse.vo;
 
+import com.gaja.nse.config.Index;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,4 +22,5 @@ public class Scrip {
     private String derivatives;
     private Double faceValue;
     private BigDecimal cap;
+    private Index index;
 }

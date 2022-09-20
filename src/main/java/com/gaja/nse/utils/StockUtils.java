@@ -31,6 +31,7 @@ import static com.gaja.nse.utils.SecurityType.OPTSTK;
 import static java.time.temporal.ChronoUnit.DAYS;
 
 public class StockUtils {
+    private static final int daysInBatch = 14;
     private static String NSE_INDIA_WWW1 = "https://www1.nseindia.com/";
 
     private StockUtils() {
@@ -75,7 +76,7 @@ public class StockUtils {
     }
 
     public static void fetchOHLCHistory(String scripName, Consumer<List<OHLCArchieve>> onBatch) throws IOException {
-        fetchOHLCHistory(scripName,null, onBatch);
+        fetchOHLCHistory(scripName,LocalDate.of(2017, 01, 01), onBatch);
     }
     public static void fetchOHLCHistory(String scripName, LocalDate fromDate, Consumer<List<OHLCArchieve>> onBatch) throws IOException {
         Connection.Response resp1 = Jsoup.connect(NSE_INDIA_WWW1 + "products/content/equities/equities/eq_security.htm")
@@ -83,12 +84,12 @@ public class StockUtils {
                 .userAgent(NseConstants.MOZILLA_CLIENT)
                 .method(Connection.Method.GET)
                 .execute();
-
+        if(fromDate == null) fromDate = LocalDate.now().minusMonths(23);
         long days = DAYS.between(fromDate, LocalDate.now());
-        long numBatches = days/7+(days%7>0?1:0);
+        long numBatches = days/ daysInBatch +(days% daysInBatch >0?1:0);
         LocalDate endDate = LocalDate.now();
         for (int i = 0; i < numBatches; i++) {
-            endDate = fromDate.plusDays(7);
+            endDate = fromDate.plusDays(days< daysInBatch ?days: daysInBatch);
             onBatch.accept(fetchEqData(scripName, fromDate, endDate, resp1));
             fromDate = endDate.plusDays(1);
         }
@@ -103,7 +104,7 @@ public class StockUtils {
                 .method(Connection.Method.GET)
                 .execute();
         if(resp.body().trim().equals("0")) throw new RuntimeException("Nothing to fetch");
-        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "products/dynaContent/common/productsSymbolMapping.jsp?symbol=" + URLEncoder.encode(scripName, StandardCharsets.UTF_8.toString()) + "&segmentLink=3&symbolCount=" + resp.body().trim() + "&series=EQ&dateRange="+(fromDate !=null?"+":"24month")+"&fromDate="+(fromDate !=null? fromDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&toDate="+(toDate !=null? toDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")): LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")))+"&dataType=PRICEVOLUMEDELIVERABLE")
+        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "products/dynaContent/common/productsSymbolMapping.jsp?symbol=" + URLEncoder.encode(scripName, StandardCharsets.UTF_8.toString()) + "&segmentLink=3&symbolCount=" + resp.body().trim() + "&series=ALL&dateRange="+(fromDate !=null?"+":"24month")+"&fromDate="+(fromDate !=null? fromDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&toDate="+(toDate !=null? toDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")): LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")))+"&dataType=PRICEVOLUMEDELIVERABLE")
                 .userAgent(NseConstants.MOZILLA_CLIENT)
                 .cookies(resp.cookies())
                 .referrer(NSE_INDIA_WWW1 + "products/content/equities/equities/eq_security.htm")
@@ -117,10 +118,17 @@ public class StockUtils {
         CsvMapper mapper = new CsvMapper();
         CsvSchema bootstrapSchema = CsvSchema.emptySchema().withHeader();
         ObjectReader oReader = mapper.readerFor(OHLCArchieve.class).with(bootstrapSchema);
-        MappingIterator<OHLCArchieve> ohlcItr = oReader.readValues(csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n").getBytes());
+        String formattedCsv = csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n");
+        formattedCsv = removeIrrelevantScripData(formattedCsv, scripName);
+        MappingIterator<OHLCArchieve> ohlcItr = oReader.readValues(formattedCsv.getBytes());
         List<OHLCArchieve> ohlcArchieves = new ArrayList<>();
         ohlcItr.forEachRemaining(ohlcArchieves::add);
         return ohlcArchieves;
+    }
+
+    private static String removeIrrelevantScripData(String formattedCsv, String scripName) {
+        String[] splitted = formattedCsv.split("\n");
+        return splitted[0]+"\n"+Arrays.stream(splitted).skip(1)/*.filter(s -> s.startsWith("\""+scripName+"\""))*/.reduce((s, s2) -> s+"\n"+s2).orElse("");
     }
 
     public static void fetchOptionsHistory(String scripName, LocalDate fromDate, boolean isIndex, String optionType, Consumer<List<DerivativeArchieve>> onBatch) throws IOException {
@@ -130,10 +138,10 @@ public class StockUtils {
                 .method(Connection.Method.GET)
                 .execute();
         long days = DAYS.between(fromDate, LocalDate.now());
-        long numBatches = days/7+(days%7>0?1:0);
+        long numBatches = days/ daysInBatch +(days% daysInBatch >0?1:0);
         LocalDate endDate = LocalDate.now();
         for (int i = 0; i < numBatches; i++) {
-            endDate = fromDate.plusDays(7);
+            endDate = fromDate.plusDays(days< daysInBatch ?days: daysInBatch);
             onBatch.accept(fetchData(scripName, fromDate, endDate, isIndex, optionType, resp1));
             fromDate = endDate.plusDays(1);
         }
@@ -155,7 +163,8 @@ public class StockUtils {
         CsvMapper mapper = new CsvMapper();
         CsvSchema bootstrapSchema = CsvSchema.emptySchema().withHeader();
         ObjectReader oReader = mapper.readerFor(DerivativeArchieve.class).with(bootstrapSchema);
-        MappingIterator<DerivativeArchieve> ohlcItr = oReader.readValues(csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n").getBytes());
+        String formattedCsv = csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n");
+        MappingIterator<DerivativeArchieve> ohlcItr = oReader.readValues(formattedCsv.getBytes());
         ohlcItr.forEachRemaining(ohlcArchieves::add);
         return ohlcArchieves;
     }

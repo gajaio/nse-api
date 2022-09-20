@@ -3,6 +3,7 @@ package com.gaja.nse.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.gaja.nse.config.Index;
 import com.gaja.nse.vo.*;
+import lombok.SneakyThrows;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -12,6 +13,9 @@ import java.util.function.Consumer;
 public interface ScripClient {
 
     List<ScripData> getAll(Index index) throws IOException;
+
+    @SneakyThrows
+    void processAllScripsForIndex(List<String> excluded, Index index, int batchSize, Consumer<List<Scrip>> onEachBatchComplete);
 
     void processAllScrips(List<String> excluded, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) throws IOException;
 

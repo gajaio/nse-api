@@ -101,12 +101,29 @@ public class NseManager implements ApplicationContextAware {
 
         @SneakyThrows
         @Override
+        public void processAllScripsForIndex(List<String> excluded, Index index, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) {
+            ListUtils.partition(getAll(index), batchSize)
+                    .parallelStream()
+                    .peek(ohlcs -> System.out.println("Processing "+ohlcs.stream().map(ScripData::getScripName).collect(Collectors.joining(","))))
+                    .map(ohlcVos -> ohlcVos.stream()
+                            .map(scripData -> getScripData(scripData.getScripName()))
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .peek(scrip -> scrip.setIndex(index))
+                            .peek(scrip -> System.out.println("Processed -> " + scrip.getSymbol()))
+                            .filter(scrip -> scrip.getSymbol() != null)
+                            .collect(Collectors.toList()))
+                    .forEach(onEachBatchComplete);
+        }
+
+        @SneakyThrows
+        @Override
         public void processAllScrips(List<String> excluded, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) {
             ListUtils.partition(bhavCopy().stream().filter(ohlc -> "EQ".equalsIgnoreCase(ohlc.getSeries().trim()) && !excluded.contains(ohlc.getSymbol())).parallel().collect(Collectors.toList()), batchSize)
                     .parallelStream()
                     .peek(ohlcs -> System.out.println("Processing "+ohlcs.stream().map(OHLC::getSymbol).collect(Collectors.joining(","))))
                     .map(ohlcVos -> ohlcVos.stream()
-                            .map(this::getScripData)
+                            .map(ohlc -> getScripData(ohlc.getSymbol()))
                             .filter(Optional::isPresent)
                             .map(Optional::get)
                             .peek(scrip -> System.out.println("Processed -> " + scrip.getSymbol()))
@@ -115,10 +132,10 @@ public class NseManager implements ApplicationContextAware {
         }
 
         @SneakyThrows
-        private Optional<Scrip> getScripData(OHLC ohlc) {
+        private Optional<Scrip> getScripData(String scrip) {
             try {
                 ResponseEntity<String> responseEntity = nseDataTemplate.exchange(API_SCRIP_DATA, HttpMethod.GET, new HttpEntity<>(getHeaders(MediaType.APPLICATION_JSON_VALUE)), String.class, new HashMap<String, String>() {{
-                    put("scripName", ohlc.getSymbol());
+                    put("scripName", scrip);
                 }});
                 HttpStatus statusCode = responseEntity.getStatusCode();
                 if (statusCode.is5xxServerError() || statusCode.is4xxClientError()) {
