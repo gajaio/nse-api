@@ -33,4 +33,6 @@ public interface ScripClient {
     List<BulkDeal> getDeals(String scripName) throws IOException;
 
     List<OptionChain> getOptionChain(String scripName) throws JsonProcessingException;
+
+    String getOrderBook(String scrip);
 }

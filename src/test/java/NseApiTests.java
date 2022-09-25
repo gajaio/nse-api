@@ -15,6 +15,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = {NseAppConfig.class})
@@ -47,6 +48,13 @@ public class NseApiTests {
     @Test
     public void fetchOHLCDataTataMotors() throws IOException {
         StockUtils.fetchOHLCHistory("TATAMOTORS", tatamotors -> Assertions.assertTrue(tatamotors.stream().count()>0));
+    }
+ @Test
+    public void orderBookTest() throws IOException, InterruptedException {
+     for (int i = 0; i < 5; i++) {
+         TimeUnit.SECONDS.sleep(1);
+         System.out.println(client.getOrderBook("TRIDENT"));
+     }
     }
 
     @Test

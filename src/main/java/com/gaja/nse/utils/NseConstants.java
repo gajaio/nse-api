@@ -4,6 +4,7 @@ public interface NseConstants {
     //urls
     final String API_EQUITY_STOCK_INDICES = "/api/equity-stockIndices?index={index}";
     final String API_SCRIP_DATA = "/api/quote-equity?symbol={scripName}";
+    final String API_SCRIP_DATA_TRADE_INFO = "/api/quote-equity?symbol={scripName}&section=trade_info";
     final String API_BULKDEAL_URL = "/api/historical/cm/bulkAndblock?symbol={scripName}";
     final String API_OPTION_CHAIN_EQUITIES = "/api/option-chain-equities?symbol={scripName}";
 

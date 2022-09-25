@@ -194,6 +194,14 @@ public class NseManager implements ApplicationContextAware {
             }});
             return optionDataAnalyzer.getOptionChart(responseEntity.getBody());
         }
+
+        @Override
+        public String getOrderBook(String scrip){
+            ResponseEntity<String> responseEntity = nseDataTemplate.exchange(API_SCRIP_DATA_TRADE_INFO, HttpMethod.GET, new HttpEntity<>(getHeaders(MediaType.APPLICATION_JSON_VALUE)), String.class, new HashMap<String, String>() {{
+                put("scripName", scrip);
+            }});
+            return responseEntity.getBody();
+        }
     }
 }
 

@@ -85,7 +85,7 @@ public class StockUtils {
                 .method(Connection.Method.GET)
                 .execute();
         if(fromDate == null) fromDate = LocalDate.now().minusMonths(23);
-        long days = DAYS.between(fromDate, LocalDate.now());
+        long days = DAYS.between(fromDate, LocalDate.now().plusDays(1));
         long numBatches = days/ daysInBatch +(days% daysInBatch >0?1:0);
         LocalDate endDate = LocalDate.now();
         for (int i = 0; i < numBatches; i++) {
