@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gaja.nse.annotations.NseHome;
-import com.gaja.nse.config.Index;
 import com.gaja.nse.config.NseServiceProperties;
 import com.gaja.nse.transformer.NseBulkDealTransformer;
 import com.gaja.nse.transformer.NseScripTransformer;
@@ -29,9 +28,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -87,21 +84,21 @@ public class NseManager implements ApplicationContextAware {
         }
 
         @Override
-        public List<ScripData> getAll(Index index) throws IOException {
+        public List<ScripData> getAll(com.gaja.nse.config.Index index) throws IOException {
             ResponseEntity<String> responseEntity = nseDataTemplate.exchange(API_EQUITY_STOCK_INDICES, HttpMethod.GET, new HttpEntity<>(getHeaders(MediaType.APPLICATION_JSON_VALUE)), String.class, new HashMap<String, String>() {{
                 put("index", index.getIndexValue());
             }});
             HttpStatus statusCode = responseEntity.getStatusCode();
             if (statusCode.is5xxServerError() || statusCode.is4xxClientError())
                 throw new HttpResponseException(statusCode.value(), statusCode.getReasonPhrase());
-            List<ScripData> scripData = nseScripTransformer.transform(responseEntity.getBody(), resource, new TypeReference<List<ScripData>>() {
+            return nseScripTransformer.transform(responseEntity.getBody(), resource, new TypeReference<List<ScripData>>() {
             });
-            return scripData;
+
         }
 
         @SneakyThrows
         @Override
-        public void processAllScripsForIndex(List<String> excluded, Index index, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) {
+        public void processAllScripsForIndex(List<String> excluded, com.gaja.nse.config.Index index, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) {
             ListUtils.partition(getAll(index), batchSize)
                     .parallelStream()
                     .peek(ohlcs -> System.out.println("Processing "+ohlcs.stream().map(ScripData::getScripName).collect(Collectors.joining(","))))
@@ -113,21 +110,6 @@ public class NseManager implements ApplicationContextAware {
                             .peek(scrip -> System.out.println("Processed -> " + scrip.getSymbol()))
                             .filter(scrip -> scrip.getSymbol() != null)
                             .collect(Collectors.toList()))
-                    .forEach(onEachBatchComplete);
-        }
-
-        @SneakyThrows
-        @Override
-        public void processAllScrips(List<String> excluded, int batchSize, Consumer<List<Scrip>> onEachBatchComplete) {
-            ListUtils.partition(bhavCopy().stream().filter(ohlc -> "EQ".equalsIgnoreCase(ohlc.getSeries().trim()) && !excluded.contains(ohlc.getSymbol())).parallel().collect(Collectors.toList()), batchSize)
-                    .parallelStream()
-                    .peek(ohlcs -> System.out.println("Processing "+ohlcs.stream().map(OHLC::getSymbol).collect(Collectors.joining(","))))
-                    .map(ohlcVos -> ohlcVos.stream()
-                            .map(ohlc -> getScripData(ohlc.getSymbol()))
-                            .filter(Optional::isPresent)
-                            .map(Optional::get)
-                            .peek(scrip -> System.out.println("Processed -> " + scrip.getSymbol()))
-                            .filter(scrip -> scrip.getSymbol() != null).collect(Collectors.toList()))
                     .forEach(onEachBatchComplete);
         }
 
@@ -152,7 +134,7 @@ public class NseManager implements ApplicationContextAware {
         @Override
         public OHLC getTradeData(String scrip) throws IOException {
             System.out.println("Trying to fetch trade Info");
-            return StockUtils.bhavCopy().stream().filter(ohlc -> scrip.equalsIgnoreCase(ohlc.getSymbol())).findFirst().get();
+            return StockUtils.bhavCopy(Collections.singletonList(scrip)).stream().findFirst().orElseThrow(()->new RuntimeException("Unable to Fetch data for "+scrip));
         }
 
         @Override
@@ -202,6 +184,17 @@ public class NseManager implements ApplicationContextAware {
             }});
             return responseEntity.getBody();
         }
+
+        @Override
+        public void getIndiaVixHistory(LocalDate startDate, Consumer<List<Vix>> onBatch) throws IOException {
+            StockUtils.fetchVixHistory(startDate, onBatch);
+        }
+
+        @Override
+        public void getIndexOhlc(LocalDate startDate, Consumer<List<Index>> onBatch) throws IOException {
+            StockUtils.fetchIndexHistory(startDate, onBatch);
+        }
+
     }
 }
 

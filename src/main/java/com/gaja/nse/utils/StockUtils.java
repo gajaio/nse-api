@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.dataformat.csv.CsvMapper;
 import com.fasterxml.jackson.dataformat.csv.CsvSchema;
-import com.gaja.nse.vo.DerivativeArchieve;
-import com.gaja.nse.vo.OHLC;
-import com.gaja.nse.vo.OHLCArchieve;
-import com.gaja.nse.vo.ReportDaily;
+import com.gaja.nse.vo.*;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -24,6 +21,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.gaja.nse.utils.SecurityType.OPTIDX;
@@ -96,6 +94,82 @@ public class StockUtils {
 
     }
 
+    public static void fetchIndexHistory(LocalDate fromDate, Consumer<List<Index>> onBatch) throws IOException {
+        Connection.Response resp1 = Jsoup.connect(NSE_INDIA_WWW1 + "products/content/equities/indices/historical_index_data.htm")
+                .followRedirects(false)
+                .userAgent(NseConstants.MOZILLA_CLIENT)
+                .method(Connection.Method.GET)
+                .execute();
+        long days = DAYS.between(fromDate, LocalDate.now().plusDays(1));
+        long numBatches = days/ 365 +(days% 365 >0?1:0);
+        LocalDate endDate = LocalDate.now();
+        for (int i = 0; i < numBatches; i++) {
+            endDate = fromDate.plusDays(days< 364 ?days: 364);
+            onBatch.accept(fetchIndex(fromDate, endDate, resp1));
+            fromDate = endDate.plusDays(1);
+        }
+    }
+
+    private static List<Index> fetchIndex(LocalDate fromDate, LocalDate toDate, Connection.Response resp1) throws IOException {
+        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "/products/dynaContent/equities/indices/historicalindices.jsp?indexType=" + URLEncoder.encode("NIFTY 50", StandardCharsets.UTF_8.toString()) + "&fromDate="+(fromDate !=null? fromDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")):"")+"&toDate="+(toDate !=null? toDate.format(DateTimeFormatter.ofPattern("dd-MM-yyyy")): LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))))
+                .userAgent(NseConstants.MOZILLA_CLIENT)
+                .cookies(resp1.cookies())
+                .referrer(NSE_INDIA_WWW1 + "products/content/equities/indices/historical_index_data.htm")
+                .method(Connection.Method.GET)
+                .execute();
+        Document parsedResponse = response.parse();
+        Element csvContentDiv = parsedResponse.getElementById("csvContentDiv");
+        if(csvContentDiv==null) return new ArrayList<>();
+        String csvData = csvContentDiv.text();
+        CsvMapper mapper = new CsvMapper();
+        CsvSchema bootstrapSchema = CsvSchema.emptySchema().withHeader();
+        ObjectReader oReader = mapper.readerFor(Index.class).with(bootstrapSchema);
+        String formattedCsv = csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n");
+        formattedCsv = removeIrrelevantScripData(formattedCsv);
+        MappingIterator<Index> ohlcItr = oReader.readValues(formattedCsv.getBytes());
+        List<Index> indexArchieves = new ArrayList<>();
+        ohlcItr.forEachRemaining(indexArchieves::add);
+        return indexArchieves;
+    }
+
+    public static void fetchVixHistory(LocalDate fromDate, Consumer<List<Vix>> onBatch) throws IOException {
+        Connection.Response resp1 = Jsoup.connect(NSE_INDIA_WWW1 + "products/content/equities/indices/historical_vix.htm")
+                .followRedirects(false)
+                .userAgent(NseConstants.MOZILLA_CLIENT)
+                .method(Connection.Method.GET)
+                .execute();
+        long days = DAYS.between(fromDate, LocalDate.now().plusDays(1));
+        long numBatches = days/ 365 +(days% 365 >0?1:0);
+        LocalDate endDate = LocalDate.now();
+        for (int i = 0; i < numBatches; i++) {
+            endDate = fromDate.plusDays(days< 364 ?days: 364);
+            onBatch.accept(fetchVix(fromDate, endDate, resp1));
+            fromDate = endDate.plusDays(1);
+        }
+    }
+
+    private static List<Vix> fetchVix(LocalDate fromDate, LocalDate toDate, Connection.Response resp1) throws IOException {
+        Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "/products/dynaContent/equities/indices/hist_vix_data.jsp?fromDate="+(fromDate !=null? fromDate.format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")):"")+"&toDate="+(toDate !=null? toDate.format(DateTimeFormatter.ofPattern("dd-MMM-yyyy")): LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy"))))
+                .userAgent(NseConstants.MOZILLA_CLIENT)
+                .cookies(resp1.cookies())
+                .referrer(NSE_INDIA_WWW1 + "products/content/equities/indices/historical_vix.htm")
+                .method(Connection.Method.GET)
+                .execute();
+        Document parsedResponse = response.parse();
+        Element csvContentDiv = parsedResponse.getElementById("csvContentDiv");
+        if(csvContentDiv==null) return new ArrayList<>();
+        String csvData = csvContentDiv.text();
+        CsvMapper mapper = new CsvMapper();
+        CsvSchema bootstrapSchema = CsvSchema.emptySchema().withHeader();
+        ObjectReader oReader = mapper.readerFor(Vix.class).with(bootstrapSchema);
+        String formattedCsv = csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n");
+        formattedCsv = removeIrrelevantScripData(formattedCsv);
+        MappingIterator<Vix> ohlcItr = oReader.readValues(formattedCsv.getBytes());
+        List<Vix> indexArchieves = new ArrayList<>();
+        ohlcItr.forEachRemaining(indexArchieves::add);
+        return indexArchieves;
+    }
+
     private static List<OHLCArchieve> fetchEqData(String scripName, LocalDate fromDate, LocalDate toDate, Connection.Response resp1) throws IOException {
         Connection.Response resp = Jsoup.connect(NSE_INDIA_WWW1 + "marketinfo/sym_map/symbolCount.jsp?symbol=" + scripName)
                 .followRedirects(false)
@@ -119,14 +193,14 @@ public class StockUtils {
         CsvSchema bootstrapSchema = CsvSchema.emptySchema().withHeader();
         ObjectReader oReader = mapper.readerFor(OHLCArchieve.class).with(bootstrapSchema);
         String formattedCsv = csvData.replaceAll("\"\\-\"", "\"0\"").replaceAll(":", "\n");
-        formattedCsv = removeIrrelevantScripData(formattedCsv, scripName);
+        formattedCsv = removeIrrelevantScripData(formattedCsv);
         MappingIterator<OHLCArchieve> ohlcItr = oReader.readValues(formattedCsv.getBytes());
         List<OHLCArchieve> ohlcArchieves = new ArrayList<>();
         ohlcItr.forEachRemaining(ohlcArchieves::add);
         return ohlcArchieves;
     }
 
-    private static String removeIrrelevantScripData(String formattedCsv, String scripName) {
+    private static String removeIrrelevantScripData(String formattedCsv) {
         String[] splitted = formattedCsv.split("\n");
         return splitted[0]+"\n"+Arrays.stream(splitted).skip(1)/*.filter(s -> s.startsWith("\""+scripName+"\""))*/.reduce((s, s2) -> s+"\n"+s2).orElse("");
     }
@@ -168,8 +242,11 @@ public class StockUtils {
         ohlcItr.forEachRemaining(ohlcArchieves::add);
         return ohlcArchieves;
     }
-
     public static List<OHLC> bhavCopy() throws IOException {
+        return bhavCopy(new ArrayList<>());
+    }
+
+    public static List<OHLC> bhavCopy(List<String> scrips) throws IOException {
         Connection.Response response = Jsoup.connect(NSE_INDIA_WWW1 + "products/content/sec_bhavdata_full.csv")
                 .userAgent(NseConstants.MOZILLA_CLIENT)
                 .ignoreContentType(true)
@@ -183,7 +260,7 @@ public class StockUtils {
         MappingIterator<OHLC> ohlcItr = oReader.readValues(csvData.replace(":", "\n").getBytes());
         List<OHLC> ohlcArchieves = new ArrayList<>();
         ohlcItr.forEachRemaining(ohlcArchieves::add);
-        return ohlcArchieves;
+        return scrips==null || scrips.isEmpty() ? ohlcArchieves:ohlcArchieves.stream().filter(ohlc -> scrips.contains(ohlc.getSymbol())).collect(Collectors.toList());
     }
 
     public static List<DerivativeArchieve> fetchDerivativeHistory(String scripName, SecurityType type, String optionType) throws IOException {
@@ -229,5 +306,38 @@ public class StockUtils {
                     put("segmentLink", Arrays.asList("9"));
                     put("symbolCount", Collections.emptyList());
                 }}).build().toUriString();
+    }
+}
+
+interface Step{
+    void execute(Connection.Response response, Consumer<String> onResponseBody) throws IOException;
+
+    void execute(Consumer<String> onResponseBody) throws IOException;
+}
+
+class FetchStep implements Step{
+    private Step step;
+    private Connection connection;
+
+    public FetchStep(Step step, Connection connection) {
+        this.step = step;
+        this.connection = connection;
+    }
+    public FetchStep(Connection connection) {
+        this.connection = connection;
+    }
+
+    @Override
+    public void execute(Connection.Response response, Consumer<String> onResponseBody) throws IOException {
+        Connection.Response executeResp = connection.cookies(response.cookies()).execute();
+        if(step!=null) {
+            step.execute(executeResp, onResponseBody);
+        }else onResponseBody.accept(executeResp.body());
+    }
+
+    @Override
+    public void execute(Consumer<String> onResponseBody) throws IOException {
+        Connection.Response response = connection.execute();
+        if(step!=null) step.execute(response, onResponseBody);
     }
 }
