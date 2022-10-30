@@ -24,19 +24,19 @@ public class DerivativeArchieve {
     @JsonProperty("Option Type")
     private String optionType;
     @JsonProperty("Open")
-    private BigDecimal open;
+    private Double open;
     @JsonProperty("High")
-    private BigDecimal high;
+    private Double high;
     @JsonProperty("Low")
-    private BigDecimal low;
+    private Double low;
     @JsonProperty("LTP")
-    private BigDecimal ltp;
+    private Double ltp;
     @JsonProperty("Close")
-    private BigDecimal close;
+    private Double close;
     @JsonProperty("Strike Price")
-    private BigDecimal strikePrice;
+    private Double strikePrice;
     @JsonProperty("Settle Price")
-    private BigDecimal settlePrice;
+    private Double settlePrice;
     @JsonProperty("Turnover in Lacs")
     private BigDecimal turnOver;
     @JsonProperty("Premium Turnover in Lacs")
@@ -46,7 +46,7 @@ public class DerivativeArchieve {
     @JsonProperty("No. of contracts")
     private long totalContracts;
     @JsonProperty("Change in OI")
-    private BigDecimal oiChange;
+    private Long oiChange;
     @JsonProperty("Underlying Value")
     private BigDecimal underlyingValue;
 }

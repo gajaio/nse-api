@@ -286,7 +286,7 @@ public class StockUtils {
         ObjectReader oReader = mapper.readerFor(DerivativeArchieve.class).with(bootstrapSchema);
         MappingIterator<DerivativeArchieve> ohlcItr = oReader.readValues(csvData.replace(":", "\n").replaceAll(",\"-\"", ",\"\"").getBytes());
         List<DerivativeArchieve> ohlcArchieves = new ArrayList<>();
-        ohlcItr.forEachRemaining(o -> ohlcArchieves.add(o));
+        ohlcItr.forEachRemaining(ohlcArchieves::add);
         return ohlcArchieves;
     }
 
